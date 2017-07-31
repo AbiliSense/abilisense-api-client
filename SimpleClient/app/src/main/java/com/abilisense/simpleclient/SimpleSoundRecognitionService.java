@@ -3,9 +3,10 @@ package com.abilisense.simpleclient;
 import android.os.Message;
 import android.util.Log;
 
-import com.abilisense.service.BaseSoundRecognitionService;
-import com.abilisense.utils.AbiliConstants;
-import com.abilisense.utils.AbilisenseUtils;
+import com.abilisense.sdk.service.BaseSoundRecognitionService;
+import com.abilisense.sdk.utils.AbiliConstants;
+import com.abilisense.sdk.utils.AbilisenseUtils;
+
 
 public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     @Override
@@ -19,8 +20,8 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     }
 
     @Override
-    protected Class getActivity() {
-        return StartActivity.class;
+    protected Class getNotificationActivity() {
+        return MainActivity.class;
     }
 
     @Override

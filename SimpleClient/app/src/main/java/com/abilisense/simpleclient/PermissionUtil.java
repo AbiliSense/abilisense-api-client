@@ -11,7 +11,6 @@ public class PermissionUtil {
     private static final int PERMISSION_REQUEST_CODE_AUDIO_ACTIVITY = 11;
 
     public static void requestAudioPermissionActivity(Activity activity) {
-
         ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.RECORD_AUDIO},
                 PERMISSION_REQUEST_CODE_AUDIO_ACTIVITY);
     }

@@ -3,22 +3,22 @@ package com.abilisense.simpleclient;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.widget.TextView;
 
-import com.abilisense.mqtt.MqttManager;
-import com.abilisense.soundrecognizer.DetectorThread;
-import com.abilisense.soundrecognizer.RecorderThread;
+import com.abilisense.sdk.soundrecognizer.DetectorThread;
 
-public class StartActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity {
 
-    private final static int ABILISENSE_LOAD_THREAD = 2;
-    private final static int ABILISENSE_LOAD_SERVICE = 1;
+    private final static int ABILISENSE_LOAD_THREAD = 1;
+    private final static int ABILISENSE_LOAD_SERVICE = 2;
 
-    private int[] mAllVariants = {ABILISENSE_LOAD_SERVICE, ABILISENSE_LOAD_THREAD};
+    private int[] mAllVariants = {ABILISENSE_LOAD_THREAD, ABILISENSE_LOAD_SERVICE};
     private int mVariant;
 
     private DetectorThread mAbilisenseThread;
@@ -60,12 +60,17 @@ public class StartActivity extends AppCompatActivity {
     }
 
     private void startThread() {
-        // You can record sound with this thread. See more in docs
-        RecorderThread recorderThread = new RecorderThread();
-        // You can provide your own manager for outputting our result
-        MqttManager mqttManager = new MqttManager(this);
+        mAbilisenseThread = new DetectorThread(new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
 
-        mAbilisenseThread = new DetectorThread(recorderThread, mqttManager);
+                switch (msg.what) {
+                    case 1:
+                        break;
+                }
+            }
+        });
         mAbilisenseThread.start();
     }
 

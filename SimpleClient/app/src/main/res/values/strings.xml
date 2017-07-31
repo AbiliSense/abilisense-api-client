@@ -2,5 +2,5 @@
     <string name="app_name">SimpleClient</string>
     <string name="start_thread_message">You\'ve started Abilisense! You choose thread style, so you\'ve got only simple thread!</string>
     <string name="start_service_message">You\'ve started Abilisense! You choose service style, so you\'ve got simple service!</string>
-    <string name="abilisense_hello_message">We glad to see your here! Hope you will enjoy your product</string>
+    <string name="abilisense_hello_message">We glad to see your here! Hope you will enjoy your product P.S. Our service are already started</string>
 </resources>
