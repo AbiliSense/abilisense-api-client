@@ -5,13 +5,23 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.abilisense.sdk.entity.Audio;
+import com.abilisense.sdk.manager.AbilisenseManager;
+import com.abilisense.sdk.mqtt.MqttManager;
+import com.abilisense.sdk.service.BaseSoundRecognitionService;
 import com.abilisense.sdk.soundrecognizer.DetectorThread;
+import com.abilisense.sdk.utils.AbiliConstants;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -21,10 +31,12 @@ public class MainActivity extends AppCompatActivity {
     private int[] mAllVariants = {ABILISENSE_LOAD_THREAD, ABILISENSE_LOAD_SERVICE};
     private int mVariant;
 
-    private DetectorThread mAbilisenseThread;
-    private boolean mSoundServiceStarted;
-
     private TextView mStartText;
+
+    private DetectorThread mAbilisenseThread;
+    private MqttManager mqttManager;
+
+    private boolean mSoundServiceStarted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,48 +55,91 @@ public class MainActivity extends AppCompatActivity {
                 if (mVariant > mAllVariants.length) {
                     mVariant = mAllVariants[0];
                 }
-                switch (mVariant) {
-                    case ABILISENSE_LOAD_SERVICE:
-                        stopThread();
-                        mStartText.setText(R.string.start_service_message);
-                        startSerice();
-                        break;
-                    case ABILISENSE_LOAD_THREAD:
-                        stopSoundRecognitionService();
-                        mStartText.setText(R.string.start_thread_message);
-                        startThread();
-                        break;
-                }
+                startAction();
             }
         });
+
+        AbilisenseManager.login(this, LoginActivity.class);
+    }
+
+    private void startAction() {
+        if (!checkPermission()) {
+            return;
+        }
+
+        mqttManager.disconnect();
+        switch (mVariant) {
+            case ABILISENSE_LOAD_SERVICE:
+                stopThread();
+                mStartText.setText(R.string.start_service_message);
+                startSoundRecognitionService();
+                break;
+            case ABILISENSE_LOAD_THREAD:
+                stopSoundRecognitionService();
+                mStartText.setText(R.string.start_thread_message);
+                startThread();
+                break;
+        }
     }
 
     private void startThread() {
-        mAbilisenseThread = new DetectorThread(new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
+        Handler handler = createHandler();
+        if (mqttManager == null) {
+            mqttManager = new MqttManager(this);
+        }
 
-                switch (msg.what) {
-                    case 1:
-                        break;
-                }
-            }
-        });
+        mAbilisenseThread = new DetectorThread(handler);
+        mqttManager.setRecognitionHandler(handler);
+        mqttManager.connect();
         mAbilisenseThread.start();
     }
 
-    private void startSerice() {
+    @NonNull
+    private Handler createHandler() {
+        return new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                switch (msg.what) {
+                    case BaseSoundRecognitionService.DETECTION_SEND_RESPONSE:
+                        List<Audio> audios = (List<Audio>) msg.obj;
+                        mqttManager.send(audios);
+                        break;
+                    case BaseSoundRecognitionService.DETECTION_LOCALE_EVENT:
+                        String str = (String) msg.obj;
+                        Log.i(AbiliConstants.LOG_TAG, "audio: " + str);
+                        break;
+                }
+            }
+        };
+    }
+
+    private boolean checkPermission() {
         if (Build.VERSION.SDK_INT >= 23) {
             if (PermissionUtil.isAudioPermissionGranted(this)) {
                 //Permission Granted Already
-                startSoundRecognitionService();
-            } else {
-                //Request Permission
-                PermissionUtil.requestAudioPermissionActivity(this);
+                return true;
             }
+            //Request Permission
+            PermissionUtil.requestAudioPermissionActivity(this);
         } else {
-            startSoundRecognitionService();
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PermissionUtil.PERMISSION_REQUEST_CODE_AUDIO_ACTIVITY
+                && PermissionUtil.isAudioPermissionGranted(this)) {
+            startAction();
+        } else {
+            if (PermissionUtil.checkShouldShowRequestPermission(this)) {
+                Toast.makeText(this, "Permission Deferred", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Permission denied", Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -109,9 +164,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-
         stopThread();
         stopSoundRecognitionService();
     }
-
 }
