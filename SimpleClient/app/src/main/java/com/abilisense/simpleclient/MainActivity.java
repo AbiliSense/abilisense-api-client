@@ -67,7 +67,6 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        mqttManager.disconnect();
         switch (mVariant) {
             case ABILISENSE_LOAD_SERVICE:
                 stopThread();
@@ -83,36 +82,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startThread() {
-        Handler handler = createHandler();
-        if (mqttManager == null) {
-            mqttManager = new MqttManager(this);
+        if (mqttManager != null) {
+            mqttManager.disconnect();
+            mqttManager = null;
         }
-
-        mAbilisenseThread = new DetectorThread(handler);
-        mqttManager.setRecognitionHandler(handler);
+        mqttManager = new MqttManager(this, mainHandler);
         mqttManager.connect();
+
+        mAbilisenseThread = new DetectorThread(mainHandler);
         mAbilisenseThread.start();
     }
 
     @NonNull
-    private Handler createHandler() {
-        return new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                switch (msg.what) {
-                    case BaseSoundRecognitionService.DETECTION_SEND_RESPONSE:
-                        List<Audio> audios = (List<Audio>) msg.obj;
-                        mqttManager.send(audios);
-                        break;
-                    case BaseSoundRecognitionService.DETECTION_LOCALE_EVENT:
-                        String str = (String) msg.obj;
-                        Log.i(AbiliConstants.LOG_TAG, "audio: " + str);
-                        break;
-                }
+    private Handler mainHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case BaseSoundRecognitionService.DETECTION_SEND_RESPONSE:
+                    List<Audio> audios = (List<Audio>) msg.obj;
+                    mqttManager.send(audios);
+                    break;
+                case BaseSoundRecognitionService.DETECTION_LOCALE_EVENT:
+                    String str = (String) msg.obj;
+                    Log.i(AbiliConstants.LOG_TAG, "audio: " + str);
+                    break;
             }
-        };
-    }
+        }
+    };
 
     private boolean checkPermission() {
         if (Build.VERSION.SDK_INT >= 23) {
@@ -151,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
     private void stopSoundRecognitionService() {
         if (mSoundServiceStarted) {
             stopService(new Intent(this, SimpleSoundRecognitionService.class));
+            mSoundServiceStarted = false;
         }
     }
 
