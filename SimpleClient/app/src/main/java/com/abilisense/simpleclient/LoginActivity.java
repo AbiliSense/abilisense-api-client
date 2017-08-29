@@ -23,9 +23,4 @@ public class LoginActivity extends AbilisenseBaseLoginActivity {
     protected Intent getParseLoginIntent() {
         return new Intent(this, AbilisenseLoginActivity.class);
     }
-
-    @Override
-    protected void startSyncService() {
-        startService(new Intent(this, SimpleSoundRecognitionService.class));
-    }
 }

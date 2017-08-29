@@ -1,5 +1,6 @@
 package com.abilisense.simpleclient;
 
+import android.content.Intent;
 import android.os.Message;
 import android.util.Log;
 
@@ -27,5 +28,15 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     @Override
     protected int getMicrophoneVolumeSensitivity() {
         return AbilisenseUtils.DEFAULT_MICROPHONE_SENSITIVITY;
+    }
+
+    @Override
+    protected void onConnected() {
+
+    }
+
+    @Override
+    protected void onDisconnected() {
+        sendBroadcast(new Intent(MainActivity.FINISH_SERVICE_ACTION));
     }
 }

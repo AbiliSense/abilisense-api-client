@@ -1,6 +1,9 @@
 package com.abilisense.simpleclient;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,7 +26,13 @@ import com.abilisense.sdk.utils.AbiliConstants;
 
 import java.util.List;
 
+/**
+ * Main app purpose is showing how you can work with Abilisense SDK. There are two possibilities,
+ * via thread or service. So you can change one after another after button clicking
+ */
 public class MainActivity extends AppCompatActivity {
+
+    public final static String FINISH_SERVICE_ACTION = "finish-service";
 
     private final static int ABILISENSE_LOAD_THREAD = 1;
     private final static int ABILISENSE_LOAD_SERVICE = 2;
@@ -37,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
     private MqttManager mqttManager;
 
     private boolean mSoundServiceStarted;
+
+    private ServiceFinishedReceiver serviceFinishedReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +70,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        serviceFinishedReceiver = new ServiceFinishedReceiver();
+        registerReceiver(serviceFinishedReceiver, new IntentFilter(FINISH_SERVICE_ACTION));
+
         AbilisenseManager.login(this, LoginActivity.class);
     }
 
@@ -76,7 +90,11 @@ public class MainActivity extends AppCompatActivity {
             case ABILISENSE_LOAD_THREAD:
                 stopSoundRecognitionService();
                 mStartText.setText(R.string.start_thread_message);
-                startThread();
+                /* We can't start thread right after stopping service, because service need some
+                 * time for closing (going through own lifecycle). So we use {@link BroadcastReceiver}
+                 * for this purpose
+                 * // startThread();
+                 */
                 break;
         }
     }
@@ -162,7 +180,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+
+        unregisterReceiver(serviceFinishedReceiver);
         stopThread();
         stopSoundRecognitionService();
+    }
+
+    /**
+     * Service needs some time to stop. After that we want to start our thread
+     * because of this app purpose.
+     */
+    private class ServiceFinishedReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(FINISH_SERVICE_ACTION)) {
+                startThread();
+            }
+        }
     }
 }
