@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -18,7 +19,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.abilisense.sdk.entity.Audio;
-import com.abilisense.sdk.manager.AbilisenseManager;
 import com.abilisense.sdk.mqtt.MqttManager;
 import com.abilisense.sdk.service.BaseSoundRecognitionService;
 import com.abilisense.sdk.soundrecognizer.DetectorThread;
@@ -33,6 +33,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     public final static String FINISH_SERVICE_ACTION = "finish-service";
+    private final static String API_KEY = "18306df7-3fde-49a1-9bef-6ad7a9d83e7f";
 
     private final static int ABILISENSE_LOAD_THREAD = 1;
     private final static int ABILISENSE_LOAD_SERVICE = 2;
@@ -72,8 +73,6 @@ public class MainActivity extends AppCompatActivity {
 
         serviceFinishedReceiver = new ServiceFinishedReceiver();
         registerReceiver(serviceFinishedReceiver, new IntentFilter(FINISH_SERVICE_ACTION));
-
-        AbilisenseManager.login(this, LoginActivity.class);
     }
 
     private void startAction() {
@@ -95,20 +94,21 @@ public class MainActivity extends AppCompatActivity {
                  * for this purpose
                  * // startThread();
                  */
+                if (!BaseSoundRecognitionService.isServiceActive())
+                    startThread();
                 break;
         }
     }
 
     private void startThread() {
-        if (mqttManager != null) {
-            mqttManager.disconnect();
-            mqttManager = null;
-        }
-        mqttManager = new MqttManager(this, mainHandler);
-        mqttManager.connect();
-
         mAbilisenseThread = new DetectorThread(mainHandler);
         mAbilisenseThread.start();
+
+        if (mqttManager != null) {
+            mqttManager = null;
+        }
+        mqttManager = new MqttManager(MainActivity.this, mainHandler, API_KEY);
+        mqttManager.connect();
     }
 
     @NonNull
@@ -123,7 +123,8 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case BaseSoundRecognitionService.DETECTION_LOCALE_EVENT:
                     String str = (String) msg.obj;
-                    Log.i(AbiliConstants.LOG_TAG, "audio: " + str);
+                    Log.i(AbiliConstants.LOG_TAG, "Locale event: " + str);
+                    showToast("Locale event: " + str);
                     break;
             }
         }
@@ -132,10 +133,10 @@ public class MainActivity extends AppCompatActivity {
     private boolean checkPermission() {
         if (Build.VERSION.SDK_INT >= 23) {
             if (PermissionUtil.isAudioPermissionGranted(this)) {
-                //Permission Granted Already
+                // Permission Granted Already
                 return true;
             }
-            //Request Permission
+            // Request Permission
             PermissionUtil.requestAudioPermissionActivity(this);
         } else {
             return true;
@@ -175,6 +176,9 @@ public class MainActivity extends AppCompatActivity {
             mAbilisenseThread.stopDetection();
             mAbilisenseThread = null;
         }
+        if (mqttManager != null) {
+            mqttManager.disconnect();
+        }
     }
 
     @Override
@@ -186,6 +190,15 @@ public class MainActivity extends AppCompatActivity {
         stopSoundRecognitionService();
     }
 
+    private synchronized void showToast(final String str) {
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, str, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     /**
      * Service needs some time to stop. After that we want to start our thread
      * because of this app purpose.
@@ -195,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(FINISH_SERVICE_ACTION)) {
                 startThread();
+                Log.i(AbiliConstants.LOG_TAG, "ServiceFinishedReceiver");
             }
         }
     }

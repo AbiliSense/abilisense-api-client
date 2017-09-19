@@ -25,5 +25,5 @@ dependencies {
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     compile 'com.android.support:design:26.+'
 
-    compile 'com.abilisense.sdk:abilisense-audio-sdk:0.4.4-alpha'
+    compile 'com.abilisense.sdk:abilisense-audio-sdk:0.5-alpha'
 }
