@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/edit_sms_recipient"
+        android:title="@string/abilisense_sms_recipient_number"/>
+    <item android:id="@+id/edit_device_name"
+        android:title="@string/abilisense_device_name"/>
+
+</menu>

@@ -1,1 +1,2 @@
-include ':app'
+include ':abilisense-audio-sdk', ':app'
+include ':openCVLibrary330'
