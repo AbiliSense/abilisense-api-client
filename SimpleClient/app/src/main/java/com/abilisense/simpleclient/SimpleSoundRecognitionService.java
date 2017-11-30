@@ -70,11 +70,12 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
 
     private boolean sendSMS(String message) {
         String phoneNumber = pref.getString(ClientConstants.RECIPIENT_PHONE_NUMBER_FIELD_NAME, "");
-
-        SmsManager smsManager = SmsManager.getDefault();
-        ArrayList<String> parts = smsManager.divideMessage(message);
-        smsManager.sendMultipartTextMessage(phoneNumber, null,
-                parts, null, null);
+        if(!phoneNumber.isEmpty()) {
+            SmsManager smsManager = SmsManager.getDefault();
+            ArrayList<String> parts = smsManager.divideMessage(message);
+            smsManager.sendMultipartTextMessage(phoneNumber, null,
+                    parts, null, null);
+        }
         return true;
     }
 
