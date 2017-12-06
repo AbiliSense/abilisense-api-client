@@ -258,6 +258,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startSoundRecognitionService() {
+        ExampleRecorder recorder = new ExampleRecorder();
+        SimpleSoundRecognitionService.setRecorder(recorder);
         Intent i = new Intent(this, SimpleSoundRecognitionService.class);
         i.putExtra(AbiliConstants.API_KEY, API_KEY);
         startService(i);
