@@ -27,6 +27,8 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     private SharedPreferences pref;
     private static long lastActivationTime = 0;
 
+    private static RecognitionEventObserver recognitionEventObserver;
+
     /**
      * Called by the system when the service is first created.  Do not call this method directly.
      */
@@ -34,6 +36,10 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     public void onCreate() {
         pref = getSharedPreferences(ClientConstants.PREFERENCE_NAME, Context.MODE_PRIVATE);
         super.onCreate();
+    }
+
+    public static void setRecognitionEventObserver(RecognitionEventObserver observer) {
+        recognitionEventObserver = observer;
     }
 
     /**
@@ -46,6 +52,8 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
      */
     @Override
     protected void startAlertActivity(Message msg, String tag, String fileId) {
+
+        recognitionEventObserver.onNext(tag);
         final String str = "=================================" +
                 "\nYou have new message from Abilisense" +
                 "\nMessage = " + msg.toString() +

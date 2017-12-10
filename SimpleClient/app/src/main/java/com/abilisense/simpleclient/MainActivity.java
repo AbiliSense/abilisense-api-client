@@ -29,6 +29,8 @@ import com.abilisense.sdk.entity.Audio;
 import com.abilisense.sdk.mqtt.MqttManager;
 import com.abilisense.sdk.service.BaseSoundRecognitionService;
 import com.abilisense.sdk.soundrecognizer.DetectorThread;
+import com.abilisense.sdk.soundrecognizer.RecorderInterface;
+import com.abilisense.sdk.soundrecognizer.RecorderThread;
 import com.abilisense.sdk.utils.AbiliConstants;
 
 import java.util.List;
@@ -58,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean mSoundServiceStarted = false;
 
     private ServiceFinishedReceiver serviceFinishedReceiver;
+    RecordingThreadWithObserver recorderThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -258,8 +261,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startSoundRecognitionService() {
-        ExampleRecorder recorder = new ExampleRecorder();
+        ExampleRecorderWithObserver recorder = new ExampleRecorderWithObserver();
+        AudioStreamObserver audioStreamObserver = new AudioStreamObserver(recorder);
+        recorderThread = new RecordingThreadWithObserver(audioStreamObserver);
+        recorderThread.start();
         SimpleSoundRecognitionService.setRecorder(recorder);
+        SimpleSoundRecognitionService.setRecognitionEventObserver(new RecognitionEventObserver(getApplicationContext()));
         Intent i = new Intent(this, SimpleSoundRecognitionService.class);
         i.putExtra(AbiliConstants.API_KEY, API_KEY);
         startService(i);
@@ -268,6 +275,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void stopSoundRecognitionService() {
         if (mSoundServiceStarted) {
+            if(recorderThread.isAlive()) {
+                recorderThread.stopRecording();
+            }
             stopService(new Intent(this, SimpleSoundRecognitionService.class));
             mSoundServiceStarted = false;
         }
