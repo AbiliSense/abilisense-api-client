@@ -6,11 +6,14 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Message;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
@@ -25,13 +28,10 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.abilisense.sdk.entity.Audio;
-import com.abilisense.sdk.mqtt.MqttManager;
 import com.abilisense.sdk.service.BaseSoundRecognitionService;
-import com.abilisense.sdk.soundrecognizer.DetectorThread;
 import com.abilisense.sdk.utils.AbiliConstants;
-
-import java.util.List;
+import com.abilisense.simpleclient.util.BootTools;
+import com.abilisense.simpleclient.util.SimpleUtils;
 
 /**
  * Main app purpose is showing how you can work with Abilisense SDK. There are two possibilities,
@@ -39,22 +39,12 @@ import java.util.List;
  */
 public class MainActivity extends AppCompatActivity {
 
-    private SharedPreferences pref;
-
     public final static String FINISH_SERVICE_ACTION = "finish-service";
     private final static String API_KEY = "e87b4d0c-697e-4ad8-bb26-05ef60cd1efe";
 
-    private final static int ABILISENSE_LOAD_THREAD = 1;
-    private final static int ABILISENSE_LOAD_SERVICE = 2;
-
-    private int[] mAllVariants = {ABILISENSE_LOAD_THREAD, ABILISENSE_LOAD_SERVICE};
-    private int mVariant = ABILISENSE_LOAD_THREAD;
-
     private TextView mStartText;
-
-    private DetectorThread mAbilisenseThread;
-    private MqttManager mqttManager;
-
+    private EditText textNumberPhone;
+    private FloatingActionButton fab;
     private boolean mSoundServiceStarted = false;
 
     private ServiceFinishedReceiver serviceFinishedReceiver;
@@ -64,25 +54,20 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
 
+        Thread.setDefaultUncaughtExceptionHandler(new BootTools.ExceptionHandler(this));
+        if (getIntent().getBooleanExtra("crash", false)) {
+            Toast.makeText(this, "Restart after crash", Toast.LENGTH_SHORT).show();
+        }
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
         mStartText = (TextView) findViewById(R.id.abilisense_title);
-
-        pref = getSharedPreferences(ClientConstants.PREFERENCE_NAME, Context.MODE_PRIVATE);
-
-        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mVariant++;
-                if(mSoundServiceStarted) {
-                    fab.setImageResource(android.R.drawable.ic_media_play);
-                    mVariant = ABILISENSE_LOAD_THREAD;
-                } else {
-                    fab.setImageResource(android.R.drawable.ic_media_pause);
-                    mVariant = ABILISENSE_LOAD_SERVICE;
-                }
-                startAction();
+                startStopService();
             }
         });
 
@@ -91,57 +76,119 @@ public class MainActivity extends AppCompatActivity {
         checkSMSPermission();
     }
 
-    private void startAction() {
+    private BroadcastReceiver mBatInfoReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(final Context context, Intent intent) {
+            final int level = intent.getIntExtra("level", -1);
+            final int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+            if (level != -1 && level <= SimpleUtils.CHECK_BATTERY_LEVEL
+                    && status == BatteryManager.BATTERY_STATUS_DISCHARGING) {
+                SimpleUtils.showBatteryNotification(context, level);
+                context.unregisterReceiver(this);
+            }
+            Log.i(AbiliConstants.LOG_TAG, String.valueOf(level) + "%");
+        }
+    };
+
+    private void startStopService() {
         if (!checkPermission()) {
             return;
         }
 
-        switch (mVariant) {
-            case ABILISENSE_LOAD_SERVICE:
-//                stopThread();
-                mStartText.setText(R.string.start_service_message);
-                if (!BaseSoundRecognitionService.isServiceActive())
-                    startSoundRecognitionService();
-                break;
-            case ABILISENSE_LOAD_THREAD:
-                stopSoundRecognitionService();
-                mStartText.setText(R.string.stop_service_message);
-                /* We can't start thread right after stopping service, because service need some
-                 * time for closing (going through own lifecycle). So we use {@link BroadcastReceiver}
-                 * for this purpose
-                 * // startThread();
-                 */
-//                if (!BaseSoundRecognitionService.isServiceActive())
-//                    startThread();
-                break;
+        if (!mSoundServiceStarted) {
+            mStartText.setText(R.string.start_service_message);
+            if (!BaseSoundRecognitionService.isServiceActive()) {
+                startSoundRecognitionService();
+                fab.setImageResource(android.R.drawable.ic_media_pause);
+            }
+        } else {
+            fab.setImageResource(android.R.drawable.ic_media_play);
+            stopSoundRecognitionService();
+            mStartText.setText(R.string.stop_service_message);
+        }
+    }
+
+    public void getContactIntent() {
+        if (checkContactsPermission()) {
+            Intent intent = new Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI);
+            startActivityForResult(intent, 1);
         }
     }
 
     @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1 && resultCode == RESULT_OK) {
+            Uri uriContact = data.getData();
+            retrieveContactNumber(getContactId(uriContact));
+        }
+    }
+
+    private void retrieveContactNumber(String contactId) {
+        Cursor cursorPhone = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                new String[]{ContactsContract.CommonDataKinds.Phone.NUMBER},
+                ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ? AND " +
+                        ContactsContract.CommonDataKinds.Phone.TYPE + " = " +
+                        ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE, new String[]{contactId}, null);
+
+        String contactNumber = null;
+        if (cursorPhone.moveToFirst()) {
+            contactNumber = cursorPhone.getString(cursorPhone.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+        }
+
+        textNumberPhone.setText(contactNumber);
+        cursorPhone.close();
+    }
+
+    private String getContactId(Uri uriContact) {
+        String contactId = "";
+        Cursor cursorID = getContentResolver().query(uriContact,
+                new String[]{ContactsContract.Contacts._ID},
+                null, null, null);
+
+        if (cursorID.moveToFirst()) {
+            contactId = cursorID.getString(cursorID.getColumnIndex(ContactsContract.Contacts._ID));
+        }
+        cursorID.close();
+        return contactId;
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        textNumberPhone = new EditText(this);
+        textNumberPhone.setHint("click for open contacts");
+        textNumberPhone.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                getContactIntent();
+            }
+        });
         final EditText editText = new EditText(this);
+
+        final SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME,
+                Context.MODE_PRIVATE);
+
         // Handle item selection
         switch (item.getItemId()) {
             case R.id.edit_sms_recipient:
-                editText.setText(pref.getString(ClientConstants.RECIPIENT_PHONE_NUMBER_FIELD_NAME, ""));
+                textNumberPhone.setText(pref.getString(SimpleUtils.RECIPIENT_PHONE_NUMBER_FIELD_NAME, ""));
                 new AlertDialog.Builder(this)
                         .setTitle("Recipient phone number")
                         .setMessage("Please enter recipient phone number")
-                        .setView(editText)
+                        .setView(textNumberPhone)
                         .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int whichButton) {
-                                String number = editText.getText().toString();
-                                pref.edit().putString(ClientConstants.RECIPIENT_PHONE_NUMBER_FIELD_NAME, number).apply();
+                                String number = textNumberPhone.getText().toString();
+                                pref.edit().putString(SimpleUtils.RECIPIENT_PHONE_NUMBER_FIELD_NAME, number).apply();
                             }
                         })
                         .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int whichButton) {
                             }
-                        })
-                        .show();
+                        }).show();
                 return true;
             case R.id.edit_device_name:
-                editText.setText(pref.getString(ClientConstants.DEVICE_NAME_FIELD_NAME, ""));
+                editText.setText(pref.getString(SimpleUtils.DEVICE_NAME_FIELD_NAME, ""));
                 new AlertDialog.Builder(this)
                         .setTitle("Device Name")
                         .setMessage("Please enter device name")
@@ -149,14 +196,13 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int whichButton) {
                                 String number = editText.getText().toString();
-                                pref.edit().putString(ClientConstants.DEVICE_NAME_FIELD_NAME, number).apply();
+                                pref.edit().putString(SimpleUtils.DEVICE_NAME_FIELD_NAME, number).apply();
                             }
                         })
                         .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int whichButton) {
                             }
-                        })
-                        .show();
+                        }).show();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -170,44 +216,28 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private void startThread() {
-        mAbilisenseThread = new DetectorThread(mainHandler);
-        mAbilisenseThread.start();
-
-        if (mqttManager != null) {
-            mqttManager = null;
-        }
-        mqttManager = new MqttManager(MainActivity.this, mainHandler, API_KEY);
-        mqttManager.connect();
-    }
-
-    @NonNull
-    private Handler mainHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            switch (msg.what) {
-                case BaseSoundRecognitionService.DETECTION_SEND_RESPONSE:
-                    List<Audio> audios = (List<Audio>) msg.obj;
-                    mqttManager.send(audios);
-                    break;
-                case BaseSoundRecognitionService.DETECTION_LOCALE_EVENT:
-                    String str = (String) msg.obj;
-                    Log.i(AbiliConstants.LOG_TAG, "Locale event: " + str);
-                    showToast("Locale event: " + str);
-                    break;
-            }
-        }
-    };
-
-    private boolean checkPermission() {
-        if (Build.VERSION.SDK_INT >= 23) {
-            if (PermissionUtil.isAudioPermissionGranted(this)) {
+    private boolean checkContactsPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (SimpleUtils.isContactsPermissionGranted(this)) {
                 // Permission Granted Already
                 return true;
             }
             // Request Permission
-            PermissionUtil.requestAudioPermissionActivity(this);
+            SimpleUtils.requestContactsPermissionActivity(this);
+        } else {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean checkPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (SimpleUtils.isAudioPermissionGranted(this)) {
+                // Permission Granted Already
+                return true;
+            }
+            // Request Permission
+            SimpleUtils.requestAudioPermissionActivity(this);
         } else {
             return true;
         }
@@ -215,13 +245,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean checkSMSPermission() {
-        if (Build.VERSION.SDK_INT >= 23) {
-            if (PermissionUtil.isSendSMSPermissionGranted(this)) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (SimpleUtils.isSendSMSPermissionGranted(this)) {
                 // Permission Granted Already
                 return true;
             }
             // Request Permission
-            PermissionUtil.requestSendSMSPermissionActivity(this);
+            SimpleUtils.requestSendSMSPermissionActivity(this);
         } else {
             return true;
         }
@@ -232,16 +262,23 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
-            case PermissionUtil.PERMISSION_REQUEST_CODE_AUDIO_ACTIVITY:
-                if(PermissionUtil.isAudioPermissionGranted(this)) {
-                    startAction();
+            case SimpleUtils.PERMISSION_REQUEST_CODE_AUDIO_ACTIVITY:
+                if (SimpleUtils.isAudioPermissionGranted(this)) {
+                    startStopService();
                 } else {
                     handleNotGrantedPermission();
                 }
                 break;
-            case PermissionUtil.PERMISSION_REQUEST_CODE_SEND_SMS:
-                if(PermissionUtil.isSendSMSPermissionGranted(this)) {
+            case SimpleUtils.PERMISSION_REQUEST_CODE_SEND_SMS:
+                if (SimpleUtils.isSendSMSPermissionGranted(this)) {
                     Toast.makeText(this, "Send SMS permission granted!", Toast.LENGTH_LONG).show();
+                } else {
+                    handleNotGrantedPermission();
+                }
+                break;
+            case SimpleUtils.PERMISSION_REQUEST_CODE_READ_CONTACT:
+                if (SimpleUtils.isContactsPermissionGranted(this)) {
+                    getContactIntent();
                 } else {
                     handleNotGrantedPermission();
                 }
@@ -250,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleNotGrantedPermission() {
-        if (PermissionUtil.checkShouldShowRequestPermission(this)) {
+        if (SimpleUtils.checkShouldShowRequestPermission(this)) {
             Toast.makeText(this, "Permission Deferred", Toast.LENGTH_LONG).show();
         } else {
             Toast.makeText(this, "Permission denied", Toast.LENGTH_LONG).show();
@@ -258,8 +295,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startSoundRecognitionService() {
-        ExampleRecorder recorder = new ExampleRecorder();
-        SimpleSoundRecognitionService.setRecorder(recorder);
         Intent i = new Intent(this, SimpleSoundRecognitionService.class);
         i.putExtra(AbiliConstants.API_KEY, API_KEY);
         startService(i);
@@ -270,16 +305,6 @@ public class MainActivity extends AppCompatActivity {
         if (mSoundServiceStarted) {
             stopService(new Intent(this, SimpleSoundRecognitionService.class));
             mSoundServiceStarted = false;
-        }
-    }
-
-    private void stopThread() {
-        if (mAbilisenseThread != null) {
-            mAbilisenseThread.stopDetection();
-            mAbilisenseThread = null;
-        }
-        if (mqttManager != null) {
-            mqttManager.disconnect();
         }
     }
 
@@ -297,7 +322,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.d(this.getClass().getName(), e.getMessage());
         }
-//        stopThread();
     }
 
     private synchronized void showToast(final String str) {
@@ -317,9 +341,21 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(FINISH_SERVICE_ACTION)) {
-//                startThread();
-                Log.i(AbiliConstants.LOG_TAG, "ServiceFinishedReceiver");
+                startStopService();
             }
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        this.registerReceiver(this.mBatInfoReceiver,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        this.unregisterReceiver(this.mBatInfoReceiver);
     }
 }
