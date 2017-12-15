@@ -68,6 +68,8 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     }
 
     private boolean detectEvent(String tag) {
+        showToast(mDetection.get(tag).toString());
+
         long currTime = new Date().getTime();
         SoundDataHolder holder = mDetection.get(tag);
         if (holder != null) {
@@ -177,6 +179,15 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
         public SoundDataHolder(String tag, long time, int count) {
             this.time = time;
             this.count = count;
+        }
+
+        @Override
+        public String toString() {
+            return "Catch sound = {" +
+                    "time=" + time +
+                    ", count=" + count +
+                    ", tag='" + tag + '\'' +
+                    '}';
         }
     }
 }

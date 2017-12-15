@@ -23,13 +23,15 @@ public class SimpleUtils {
     public static final int PERMISSION_REQUEST_CODE_AUDIO_ACTIVITY = 1101;
     public static final int PERMISSION_REQUEST_CODE_READ_CONTACT = 1103;
     public static final int PERMISSION_REQUEST_CODE_SEND_SMS = 1102;
+
     public static final String PREFERENCE_NAME = "Abilisence";
     public static final String RECIPIENT_PHONE_NUMBER_FIELD_NAME = "RecipientPhoneNumber";
     public static final String DEVICE_NAME_FIELD_NAME = "DeviceName";
-    public static final int CHECK_BATTERY_LEVEL = 88;
+
+    public static final int CHECK_BATTERY_LEVEL = 70;
+
     public static final int X_DETEXT_COUNT = 4;
     public static final long X_DETECT_TIME_DURATION_MS = 60 * 1000;
-    public static final String ACTION_START_CHACKING = "ts.abilisense.action.START_CHECKING";
 
     public static void requestAudioPermissionActivity(Activity activity) {
         ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.RECORD_AUDIO},
