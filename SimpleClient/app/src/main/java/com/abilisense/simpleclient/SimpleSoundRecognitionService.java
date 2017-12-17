@@ -49,7 +49,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
                 "\nField = " + fileId +
                 "\n=================================";
         Log.e(AbiliConstants.LOG_TAG, str);
-        // showToast(str);
+        showToast(str);
 
         SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME, Context.MODE_PRIVATE);
         String deviceName = pref.getString(SimpleUtils.DEVICE_NAME_FIELD_NAME, "");
@@ -72,13 +72,15 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
         SoundDataHolder holder = mDetection.get(tag);
         if (holder != null) {
             long timeFuture = holder.time + SimpleUtils.X_DETECT_TIME_DURATION_MS;
-            if (holder.count > SimpleUtils.X_DETEXT_COUNT && timeFuture < currTime) {
+            if (timeFuture <= currTime) {
+                mDetection.remove(tag);
+                return false;
+            }
+            if (holder.count >= SimpleUtils.X_DETEXT_COUNT) {
                 mDetection.remove(tag);
                 return true;
-            } else {
-                holder.count++;
-                mDetection.put(tag, holder);
             }
+            holder.count++;
         } else {
             mDetection.put(tag, new SoundDataHolder(tag, currTime, 1));
         }
