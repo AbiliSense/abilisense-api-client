@@ -49,7 +49,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
                 "\nField = " + fileId +
                 "\n=================================";
         Log.e(AbiliConstants.LOG_TAG, str);
-        showToast(str);
+        // showToast(str);
 
         SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME, Context.MODE_PRIVATE);
         String deviceName = pref.getString(SimpleUtils.DEVICE_NAME_FIELD_NAME, "");
