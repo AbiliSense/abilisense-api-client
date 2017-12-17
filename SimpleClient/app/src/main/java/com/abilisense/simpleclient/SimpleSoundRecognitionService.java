@@ -68,8 +68,6 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     }
 
     private boolean detectEvent(String tag) {
-        showToast(mDetection.get(tag).toString());
-
         long currTime = new Date().getTime();
         SoundDataHolder holder = mDetection.get(tag);
         if (holder != null) {
