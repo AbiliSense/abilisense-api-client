@@ -53,7 +53,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     @Override
     protected void startAlertActivity(Message msg, String tag, String fileId) {
 
-        recognitionEventObserver.onNext(tag);
+        recognitionEventObserver.onNext(new AudioEvent(tag, msg.getWhen()));
         final String str = "=================================" +
                 "\nYou have new message from Abilisense" +
                 "\nMessage = " + msg.toString() +

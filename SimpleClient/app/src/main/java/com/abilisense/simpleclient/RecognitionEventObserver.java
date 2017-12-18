@@ -10,7 +10,7 @@ import rx.Observer;
  * Created by anatolyt on 10/12/2017.
  */
 
-public class RecognitionEventObserver  implements Observer<String> {
+public class RecognitionEventObserver implements Observer<AudioEvent> {
 
     private Context context;
 
@@ -29,7 +29,8 @@ public class RecognitionEventObserver  implements Observer<String> {
     }
 
     @Override
-    public void onNext(String s) {
-        Toast.makeText(context, s, Toast.LENGTH_SHORT).show();
+    public void onNext(AudioEvent audioEvent) {
+        Toast.makeText(context, audioEvent.getTag(), Toast.LENGTH_SHORT).show();
     }
+
 }
