@@ -25,12 +25,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.abilisense.sdk.entity.Audio;
-import com.abilisense.sdk.mqtt.MqttManager;
 import com.abilisense.sdk.service.BaseSoundRecognitionService;
-import com.abilisense.sdk.soundrecognizer.DetectorThread;
 import com.abilisense.sdk.soundrecognizer.RecorderInterface;
-import com.abilisense.sdk.soundrecognizer.RecorderThread;
 import com.abilisense.sdk.utils.AbiliConstants;
 
 import java.util.List;
@@ -53,9 +49,6 @@ public class MainActivity extends AppCompatActivity {
     private int mVariant = ABILISENSE_LOAD_THREAD;
 
     private TextView mStartText;
-
-    private DetectorThread mAbilisenseThread;
-    private MqttManager mqttManager;
 
     private boolean mSoundServiceStarted = false;
 
@@ -173,35 +166,6 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    private void startThread() {
-        mAbilisenseThread = new DetectorThread(mainHandler);
-        mAbilisenseThread.start();
-
-        if (mqttManager != null) {
-            mqttManager = null;
-        }
-        mqttManager = new MqttManager(MainActivity.this, mainHandler, API_KEY);
-        mqttManager.connect();
-    }
-
-    @NonNull
-    private Handler mainHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            switch (msg.what) {
-                case BaseSoundRecognitionService.DETECTION_SEND_RESPONSE:
-                    List<Audio> audios = (List<Audio>) msg.obj;
-                    mqttManager.send(audios);
-                    break;
-                case BaseSoundRecognitionService.DETECTION_LOCALE_EVENT:
-                    String str = (String) msg.obj;
-                    Log.i(AbiliConstants.LOG_TAG, "Locale event: " + str);
-                    showToast("Locale event: " + str);
-                    break;
-            }
-        }
-    };
 
     private boolean checkPermission() {
         if (Build.VERSION.SDK_INT >= 23) {
@@ -283,15 +247,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void stopThread() {
-        if (mAbilisenseThread != null) {
-            mAbilisenseThread.stopDetection();
-            mAbilisenseThread = null;
-        }
-        if (mqttManager != null) {
-            mqttManager.disconnect();
-        }
-    }
 
     @Override
     protected void onDestroy() {

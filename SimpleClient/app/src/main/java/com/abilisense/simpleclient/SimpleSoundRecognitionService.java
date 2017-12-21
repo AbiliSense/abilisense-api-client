@@ -30,7 +30,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     private static RecognitionEventObserver recognitionEventObserver;
 
     /**
-     * Called by the system when the service is first created.  Do not call this method directly.
+     * Called by the system when the service is first created.  Do not call this method directly``.
      */
     @Override
     public void onCreate() {
