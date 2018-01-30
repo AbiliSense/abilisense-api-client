@@ -4,6 +4,21 @@
     <string name="start_thread_message">You\'ve started Abilisense! You choose thread style, so you\'ve got only simple thread!</string>
     <string name="start_service_message">You\'ve started Abilisense! You choose service style, so you\'ve got simple service!</string>
     <string name="abilisense_hello_message">We glad to see your here! Hope you will enjoy your product.</string>
-    <string name="abilisense_sms_recipient_number">SMS Recipient</string>
+    <string name="numbers_for_sms">SMS Recipients</string>
     <string name="abilisense_device_name">Device Name</string>
+    <string name="detection_threshold">Detection threshold</string>
+    <string name="detection_threshold_dialog_message">Please, enter appropriate detection threshold count</string>
+    <string name="detection_threshold_save_button">Save</string>
+    <string name="detection_threshold_cancel_button">Cancel</string>
+    <string name="device_name_dialog_title">Device Name</string>
+    <string name="device_name_dialog_message">Please, enter appropriate device name</string>
+    <string name="device_name_dialog_save_button">Save</string>
+    <string name="device_name_dialog_cancel_button">Cancel</string>
+    <string name="phones_dialog_title">Recipient phone numbers</string>
+    <string name="phones_dialog_message">Your emergency phones are:</string>
+    <string name="permissions_deffered">Permission Deferred</string>
+    <string name="permissions_denied">Permission denied</string>
+    <string name="add_contact_button">ADD CONTACT</string>
+    <string name="ok_button">OK</string>
+    <string name="clean_button">CLEAN</string>
 </resources>

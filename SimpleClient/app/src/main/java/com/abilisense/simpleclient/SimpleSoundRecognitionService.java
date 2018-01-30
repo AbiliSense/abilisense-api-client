@@ -20,12 +20,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-/**
- *
- */
 public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
 
     private static long lastActivationTime = 0;
@@ -54,15 +52,15 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
         SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME, Context.MODE_PRIVATE);
         String deviceName = pref.getString(SimpleUtils.DEVICE_NAME_FIELD_NAME, "");
         String phoneNumber = pref.getString(SimpleUtils.RECIPIENT_PHONE_NUMBER_FIELD_NAME, "");
-
         long now = System.currentTimeMillis();
         if (now - TimeUnit.SECONDS.toMillis(15) > lastActivationTime && detectEvent(tag)) {
             lastActivationTime = now;
             if (SimpleUtils.isSendSMSPermissionGranted(getApplicationContext())) {
                 Date today = new Date();
-                SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
                 sendSMS(phoneNumber, String.format("Event detected by AbiliSense device: %s, at: %s, event: %s",
                         deviceName, formatter.format(today), tag));
+                // FOR TEST: showToast("SMS sent");
             }
         }
     }
@@ -76,7 +74,10 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
                 mDetection.remove(tag);
                 return false;
             }
-            if (holder.count >= SimpleUtils.X_DETEXT_COUNT) {
+
+            SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME, Context.MODE_PRIVATE);
+            int countDetect = Integer.valueOf(pref.getString(SimpleUtils.DETECTION_THRESHOLD_COUNT, "1"));
+            if (holder.count >= countDetect) {
                 mDetection.remove(tag);
                 return true;
             }
@@ -93,14 +94,13 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
         return Service.START_STICKY;
     }
 
-    private boolean sendSMS(String phoneNumber, String message) {
+    private void sendSMS(String phoneNumber, String message) {
         if (!phoneNumber.isEmpty()) {
             SmsManager smsManager = SmsManager.getDefault();
             ArrayList<String> parts = smsManager.divideMessage(message);
             smsManager.sendMultipartTextMessage(phoneNumber, null,
                     parts, null, null);
         }
-        return true;
     }
 
     private void showToast(final String str) {
@@ -127,7 +127,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
      * Minimal volume level for detection in -db
      * e.g. if you wnat -45db return 45 here
      *
-     * @return
+     * @return volume level
      */
     @Override
     protected int getMicrophoneVolumeSensitivity() {
@@ -137,7 +137,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
     /**
      * Defines if recognition results aggregation is enabled
      *
-     * @return
+     * @return true, if enabled
      */
     @Override
     protected boolean isAggregationEnabled() {
@@ -168,15 +168,15 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
      */
     @Override
     protected void onDisconnected() {
-        sendBroadcast(new Intent(MainActivity.FINISH_SERVICE_ACTION));
     }
 
     private static class SoundDataHolder {
-        public long time;
-        public int count;
-        public String tag;
+        long time;
+        int count;
+        String tag;
 
-        public SoundDataHolder(String tag, long time, int count) {
+        SoundDataHolder(String tag, long time, int count) {
+            this.tag = tag;
             this.time = time;
             this.count = count;
         }

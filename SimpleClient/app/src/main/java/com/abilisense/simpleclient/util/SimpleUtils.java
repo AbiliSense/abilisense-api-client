@@ -27,11 +27,11 @@ public class SimpleUtils {
     public static final String PREFERENCE_NAME = "Abilisence";
     public static final String RECIPIENT_PHONE_NUMBER_FIELD_NAME = "RecipientPhoneNumber";
     public static final String DEVICE_NAME_FIELD_NAME = "DeviceName";
-
+    public final static String FINISH_SERVICE_ACTION = "finish-service";
     public static final int CHECK_BATTERY_LEVEL = 70;
 
-    public static final int X_DETEXT_COUNT = 4;
     public static final long X_DETECT_TIME_DURATION_MS = 60 * 1000;
+    public static final String DETECTION_THRESHOLD_COUNT = "detect_threshold";
 
     public static void requestAudioPermissionActivity(Activity activity) {
         ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.RECORD_AUDIO},
@@ -51,31 +51,18 @@ public class SimpleUtils {
     public static boolean isAudioPermissionGranted(Activity activity) {
 
         int result = ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO);
-        if (result == PackageManager.PERMISSION_GRANTED) {
-            return true;
-        } else {
-            return false;
-        }
+        return result == PackageManager.PERMISSION_GRANTED;
     }
 
     public static boolean isContactsPermissionGranted(Context context) {
 
         int result = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS);
-        if (result == PackageManager.PERMISSION_GRANTED) {
-            return true;
-        } else {
-            return false;
-        }
+        return result == PackageManager.PERMISSION_GRANTED;
     }
 
     public static boolean isSendSMSPermissionGranted(Context context) {
-
         int result = ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS);
-        if (result == PackageManager.PERMISSION_GRANTED) {
-            return true;
-        } else {
-            return false;
-        }
+        return result == PackageManager.PERMISSION_GRANTED;
     }
 
     public static boolean checkShouldShowRequestPermission(Activity activity) {
@@ -104,15 +91,12 @@ public class SimpleUtils {
                 .setContentTitle("Battery notification")
                 .setContentText("Battery level equals " + level + " %");
 
-        Notification notification = null;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-            notification = builder.build();
-        } else {
-            notification = builder.getNotification();
-        }
+        Notification notification = builder.build();
 
         NotificationManager notificationManager =
                 (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(1, notification);
+        if (notificationManager != null) {
+            notificationManager.notify(1, notification);
+        }
     }
 }

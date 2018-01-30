@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/text_phones"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:text="Phones"
+        android:gravity="center_horizontal"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/text_cleat_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/text_phones"
+        android:layout_margin="8dp"
+        android:layout_toStartOf="@+id/text_contact_btn"
+        android:background="@drawable/dialog_button_selector"
+        android:padding="8dp"
+        android:text="@string/clean_button"
+        android:textColor="@color/colorAccent"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/text_contact_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/text_phones"
+        android:layout_margin="8dp"
+        android:layout_toStartOf="@+id/text_save_btn"
+        android:background="@drawable/dialog_button_selector"
+        android:padding="8dp"
+        android:text="@string/add_contact_button"
+        android:textColor="@color/colorAccent"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/text_save_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_below="@+id/text_phones"
+        android:layout_margin="8dp"
+        android:background="@drawable/dialog_button_selector"
+        android:padding="8dp"
+        android:text="@string/ok_button"
+        android:textColor="@color/colorAccent"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+</RelativeLayout>

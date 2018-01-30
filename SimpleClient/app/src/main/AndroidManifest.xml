@@ -41,6 +41,7 @@
                 <action android:name="android.intent.action.RECEIVE_BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
         <meta-data
             android:name="com.parse.SERVER_URL"
             android:value="@string/parse_server_url" />
@@ -48,5 +49,4 @@
             android:name="com.parse.APPLICATION_ID"
             android:value="@string/parse_app_id" />
     </application>
-
 </manifest>
