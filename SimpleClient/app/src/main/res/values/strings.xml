@@ -21,4 +21,5 @@
     <string name="add_contact_button">ADD CONTACT</string>
     <string name="ok_button">OK</string>
     <string name="clean_button">CLEAN</string>
+    <string name="item_dialog_phones">no phones</string>
 </resources>

@@ -1,9 +1,7 @@
 package com.abilisense.simpleclient;
 
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -14,6 +12,7 @@ import android.widget.Toast;
 import com.abilisense.sdk.service.BaseSoundRecognitionService;
 import com.abilisense.sdk.utils.AbiliConstants;
 import com.abilisense.sdk.utils.AbilisenseUtils;
+import com.abilisense.simpleclient.util.SharedHelper;
 import com.abilisense.simpleclient.util.SimpleUtils;
 
 import java.text.SimpleDateFormat;
@@ -28,6 +27,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
 
     private static long lastActivationTime = 0;
     private Map<String, SoundDataHolder> mDetection = new HashMap<>();
+    private SharedHelper sharedHelper;
 
     /**
      * Handling the recognition event, you can notify user here
@@ -47,19 +47,23 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
                 "\nField = " + fileId +
                 "\n=================================";
         Log.e(AbiliConstants.LOG_TAG, str);
-        // showToast(str);
 
-        SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME, Context.MODE_PRIVATE);
-        String deviceName = pref.getString(SimpleUtils.DEVICE_NAME_FIELD_NAME, "");
-        String phoneNumber = pref.getString(SimpleUtils.RECIPIENT_PHONE_NUMBER_FIELD_NAME, "");
+        sharedHelper = new SharedHelper(getApplicationContext());
+
+        String deviceName = sharedHelper.getDeviceName();
+        String phoneNumberAll = sharedHelper.getPhones();
         long now = System.currentTimeMillis();
         if (now - TimeUnit.SECONDS.toMillis(15) > lastActivationTime && detectEvent(tag)) {
             lastActivationTime = now;
             if (SimpleUtils.isSendSMSPermissionGranted(getApplicationContext())) {
                 Date today = new Date();
                 SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
-                sendSMS(phoneNumber, String.format("Event detected by AbiliSense device: %s, at: %s, event: %s",
-                        deviceName, formatter.format(today), tag));
+                String smsBody = String.format("Event detected by AbiliSense device: %s, at: %s, event: %s",
+                        deviceName, formatter.format(today), tag);
+                String phones[] = phoneNumberAll.split("; ");
+                for (String phone : phones) {
+                    sendSMS(phone, smsBody);
+                }
                 // FOR TEST: showToast("SMS sent");
             }
         }
@@ -75,8 +79,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
                 return false;
             }
 
-            SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME, Context.MODE_PRIVATE);
-            int countDetect = Integer.valueOf(pref.getString(SimpleUtils.DETECTION_THRESHOLD_COUNT, "1"));
+            int countDetect = sharedHelper.getDetectorThreshold();
             if (holder.count >= countDetect) {
                 mDetection.remove(tag);
                 return true;
@@ -168,6 +171,7 @@ public class SimpleSoundRecognitionService extends BaseSoundRecognitionService {
      */
     @Override
     protected void onDisconnected() {
+        sendBroadcast(new Intent(SimpleUtils.FINISH_SERVICE_ACTION));
     }
 
     private static class SoundDataHolder {

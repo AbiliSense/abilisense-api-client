@@ -10,8 +10,8 @@
         android:layout_alignParentTop="true"
         android:layout_marginLeft="16dp"
         android:layout_marginRight="16dp"
-        android:text="Phones"
         android:gravity="center_horizontal"
+        android:hint="@string/item_dialog_phones"
         android:textSize="14sp" />
 
     <TextView

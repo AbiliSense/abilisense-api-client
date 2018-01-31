@@ -17,23 +17,18 @@ import android.support.v4.content.ContextCompat;
 import com.abilisense.simpleclient.MainActivity;
 import com.abilisense.simpleclient.R;
 
-
 public class SimpleUtils {
 
     public static final int PERMISSION_REQUEST_CODE_AUDIO_ACTIVITY = 1101;
     public static final int PERMISSION_REQUEST_CODE_READ_CONTACT = 1103;
     public static final int PERMISSION_REQUEST_CODE_SEND_SMS = 1102;
 
-    public static final String PREFERENCE_NAME = "Abilisence";
-    public static final String RECIPIENT_PHONE_NUMBER_FIELD_NAME = "RecipientPhoneNumber";
-    public static final String DEVICE_NAME_FIELD_NAME = "DeviceName";
     public final static String FINISH_SERVICE_ACTION = "finish-service";
     public static final int CHECK_BATTERY_LEVEL = 70;
 
     public static final long X_DETECT_TIME_DURATION_MS = 60 * 1000;
-    public static final String DETECTION_THRESHOLD_COUNT = "detect_threshold";
-
     public static void requestAudioPermissionActivity(Activity activity) {
+
         ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.RECORD_AUDIO},
                 PERMISSION_REQUEST_CODE_AUDIO_ACTIVITY);
     }

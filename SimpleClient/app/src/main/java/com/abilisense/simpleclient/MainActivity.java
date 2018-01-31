@@ -1,11 +1,11 @@
 package com.abilisense.simpleclient;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.BatteryManager;
@@ -35,6 +35,7 @@ import android.widget.Toast;
 import com.abilisense.sdk.service.BaseSoundRecognitionService;
 import com.abilisense.sdk.utils.AbiliConstants;
 import com.abilisense.simpleclient.util.BootTools;
+import com.abilisense.simpleclient.util.SharedHelper;
 import com.abilisense.simpleclient.util.SimpleUtils;
 
 /**
@@ -48,15 +49,17 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView mStartText;
     private FloatingActionButton fab;
-
     private TextView phonesTextView;
 
     private ServiceFinishedReceiver serviceFinishedReceiver;
+    private SharedHelper sharedHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
+
+        sharedHelper = new SharedHelper(this);
 
         Thread.setDefaultUncaughtExceptionHandler(new BootTools.ExceptionHandler(this));
         if (getIntent().getBooleanExtra("crash", false)) {
@@ -69,12 +72,6 @@ public class MainActivity extends AppCompatActivity {
         mStartText = (TextView) findViewById(R.id.abilisense_title);
 
         fab = (FloatingActionButton) findViewById(R.id.fab);
-        if (SimpleSoundRecognitionService.isServiceActive()) {
-            fab.setImageResource(android.R.drawable.ic_media_pause);
-        } else {
-            fab.setImageResource(android.R.drawable.ic_media_play);
-        }
-
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -160,36 +157,34 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        final SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME,
-                Context.MODE_PRIVATE);
-
         switch (item.getItemId()) {
             case R.id.edit_phones_sms:
                 createPhonesDialog();
                 return true;
             case R.id.edit_device_name:
-                createDeviceNameDialog(pref);
+                createDeviceNameDialog();
                 return true;
             case R.id.edit_detection_threshold:
-                createDetectionThresholdDialog(pref);
+                createDetectionThresholdDialog();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
 
-    private void createDetectionThresholdDialog(final SharedPreferences pref) {
+    @SuppressLint("SetTextI18n")
+    private void createDetectionThresholdDialog() {
         final TextInputEditText inputEditText = new TextInputEditText(this);
         inputEditText.setInputType(InputType.TYPE_CLASS_NUMBER);
-        inputEditText.setText(pref.getString(SimpleUtils.DETECTION_THRESHOLD_COUNT, ""));
+        inputEditText.setText(sharedHelper.getDetectorThreshold() + "");
         new AlertDialog.Builder(this)
                 .setTitle(R.string.detection_threshold)
                 .setMessage(R.string.detection_threshold_dialog_message)
                 .setView(inputEditText)
                 .setPositiveButton(R.string.detection_threshold_save_button, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        String number = inputEditText.getText().toString();
-                        pref.edit().putString(SimpleUtils.DETECTION_THRESHOLD_COUNT, number).apply();
+                        int number = Integer.valueOf(inputEditText.getText().toString());
+                        sharedHelper.setDetectorThreshold(number);
                     }
                 })
                 .setNegativeButton(R.string.detection_threshold_cancel_button, new DialogInterface.OnClickListener() {
@@ -198,9 +193,9 @@ public class MainActivity extends AppCompatActivity {
                 }).show();
     }
 
-    private void createDeviceNameDialog(final SharedPreferences pref) {
+    private void createDeviceNameDialog() {
         final EditText editText = new EditText(this);
-        editText.setText(pref.getString(SimpleUtils.DEVICE_NAME_FIELD_NAME, ""));
+        editText.setText(sharedHelper.getDeviceName());
         new AlertDialog.Builder(this)
                 .setTitle(R.string.device_name_dialog_title)
                 .setMessage(R.string.device_name_dialog_message)
@@ -208,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton(R.string.device_name_dialog_save_button, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
                         String number = editText.getText().toString();
-                        pref.edit().putString(SimpleUtils.DEVICE_NAME_FIELD_NAME, number).apply();
+                        sharedHelper.setDeviceName(number);
                     }
                 })
                 .setNegativeButton(R.string.device_name_dialog_cancel_button, new DialogInterface.OnClickListener() {
@@ -218,19 +213,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void createPhonesDialog() {
-        LinearLayout phonesLayout = new LinearLayout(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.item_contact,
+                new LinearLayout(this));
 
         final AlertDialog.Builder build = new AlertDialog.Builder(this)
                 .setCancelable(false)
                 .setTitle(R.string.phones_dialog_title)
                 .setMessage(R.string.phones_dialog_message)
-                .setView(phonesLayout);
+                .setView(view);
         final AlertDialog dialog = build.show();
 
-        final SharedPreferences pref = getSharedPreferences(SimpleUtils.PREFERENCE_NAME,
-                Context.MODE_PRIVATE);
-
-        View view = LayoutInflater.from(this).inflate(R.layout.item_contact, phonesLayout);
         phonesTextView = view.findViewById(R.id.text_phones);
         TextView textClean = view.findViewById(R.id.text_cleat_btn);
         TextView textContact = view.findViewById(R.id.text_contact_btn);
@@ -245,18 +237,22 @@ public class MainActivity extends AppCompatActivity {
         textClean.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                phonesTextView.setText("");
+                phonesTextView.setText(null);
             }
         });
         textSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String number = phonesTextView.getText().toString();
-                pref.edit().putString(SimpleUtils.RECIPIENT_PHONE_NUMBER_FIELD_NAME, number).apply();
+                sharedHelper.setPhones(number);
                 dialog.dismiss();
             }
         });
-        phonesTextView.setText(pref.getString(SimpleUtils.RECIPIENT_PHONE_NUMBER_FIELD_NAME, ""));
+
+        String allPhone = sharedHelper.getPhones();
+        if (allPhone.length() > 0) {
+            phonesTextView.setText(allPhone);
+        }
     }
 
     @Override
@@ -363,6 +359,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void playPauseFab() {
+        if (SimpleSoundRecognitionService.isServiceActive()) {
+            fab.setImageResource(android.R.drawable.ic_media_pause);
+        } else {
+            fab.setImageResource(android.R.drawable.ic_media_play);
+        }
+    }
+
     @Override
     protected void onDestroy() {
         stopSoundRecognitionService();
@@ -391,8 +395,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        this.registerReceiver(this.mBatInfoReceiver,
-                new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        playPauseFab();
+
+        registerReceiver(this.mBatInfoReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
     }
 
     @Override
@@ -423,7 +428,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (SimpleUtils.FINISH_SERVICE_ACTION.equals(intent.getAction())) {
-                startStopService();
+                playPauseFab();
             }
         }
     }

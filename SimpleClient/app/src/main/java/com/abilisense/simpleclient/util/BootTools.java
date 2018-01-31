@@ -7,8 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.support.v4.content.WakefulBroadcastReceiver;
 
-import com.abilisense.simpleclient.MainActivity;
-import com.abilisense.simpleclient.AcraApp;
 import com.abilisense.simpleclient.SimpleSoundRecognitionService;
 
 public class BootTools {
@@ -36,15 +34,16 @@ public class BootTools {
                     | Intent.FLAG_ACTIVITY_CLEAR_TASK
                     | Intent.FLAG_ACTIVITY_NEW_TASK);
             PendingIntent pendingIntent =
-                    PendingIntent.getService(AcraApp.getInstance().getApplicationContext(),
+                    PendingIntent.getService(mExceptionActivity,
                             0, intent,
                             PendingIntent.FLAG_ONE_SHOT);
 
-            AlarmManager alarmManager = (AlarmManager) AcraApp
-                    .getInstance()
-                    .getApplicationContext()
+            AlarmManager alarmManager = (AlarmManager) mExceptionActivity
                     .getSystemService(Context.ALARM_SERVICE);
-            alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 1000, pendingIntent);
+            if (alarmManager != null) {
+                alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 1000,
+                        pendingIntent);
+            }
 
             mExceptionActivity.finish();
             System.exit(2);
